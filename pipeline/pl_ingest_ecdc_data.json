@@ -1,6 +1,7 @@
 {
 	"name": "pl_ingest_ecdc_data",
 	"properties": {
+		"description": "This is my pipeline",
 		"activities": [
 			{
 				"name": "Lookup file list",
