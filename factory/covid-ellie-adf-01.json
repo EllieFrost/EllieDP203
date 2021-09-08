@@ -1,0 +1,9 @@
+{
+	"name": "covid-ellie-adf-01",
+	"location": "uksouth",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "5c8a5209-89f6-4482-a9ca-0c8e0c0b1554",
+		"tenantId": "9c889a6c-4c9a-42d3-8cf7-065fd2c7b5d1"
+	}
+}
