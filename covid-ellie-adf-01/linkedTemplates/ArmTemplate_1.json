@@ -1,0 +1,165 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "covid-ellie-adf-01"
+		},
+		"tr_hospital_admission_properties_pl_ingest_ecdc_data_parameters_relativeUrl": {
+			"type": "string",
+			"defaultValue": "covid19/hospitalicuadmissionrates/csv/data.csv"
+		},
+		"tr_hospital_admission_properties_pl_ingest_ecdc_data_parameters_fileName": {
+			"type": "string",
+			"defaultValue": "hospital_admission.csv"
+		},
+		"tr_hospital_admission_properties_pl_ingest_ecdc_data_parameters_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://opendata.ecdc.europa.eu"
+		},
+		"tr_publish_daily_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/eeb80e90-a2f4-41b7-af18-026b6c2901de/resourceGroups/covidanalytics-ellie-rg/providers/Microsoft.Storage/storageAccounts/covidanalyticselliestr"
+		},
+		"tr_testing_properties_pl_ingest_ecdc_data_parameters_relativeUrl": {
+			"type": "string",
+			"defaultValue": "covid19/testing/csv/data.csv\n"
+		},
+		"tr_testing_properties_pl_ingest_ecdc_data_parameters_fileName": {
+			"type": "string",
+			"defaultValue": "testing.csv"
+		},
+		"tr_testing_properties_pl_ingest_ecdc_data_parameters_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://opendata.ecdc.europa.eu"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/tr_hospital_admission')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_ingest_ecdc_data",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"relativeUrl": "[parameters('tr_hospital_admission_properties_pl_ingest_ecdc_data_parameters_relativeUrl')]",
+							"fileName": "[parameters('tr_hospital_admission_properties_pl_ingest_ecdc_data_parameters_fileName')]",
+							"baseUrl": "[parameters('tr_hospital_admission_properties_pl_ingest_ecdc_data_parameters_baseUrl')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Minute",
+						"interval": 24,
+						"startTime": "2021-09-05T10:10:00",
+						"timeZone": "GMT Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/tr_publish_daily')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_ingest_population_data",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathBeginsWith": "/data/blobs/population",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('tr_publish_daily_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/tr_testing')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_ingest_ecdc_data",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"relativeUrl": "[parameters('tr_testing_properties_pl_ingest_ecdc_data_parameters_relativeUrl')]",
+							"fileName": "[parameters('tr_testing_properties_pl_ingest_ecdc_data_parameters_fileName')]",
+							"baseUrl": "[parameters('tr_testing_properties_pl_ingest_ecdc_data_parameters_baseUrl')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Minute",
+						"interval": 15,
+						"startTime": "2021-09-05T10:10:00",
+						"timeZone": "GMT Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/tumbling trigger')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipeline": {
+					"pipelineReference": {
+						"referenceName": "pl_ingest_population_data",
+						"type": "PipelineReference"
+					},
+					"parameters": {}
+				},
+				"type": "TumblingWindowTrigger",
+				"typeProperties": {
+					"frequency": "Minute",
+					"interval": 5,
+					"startTime": "2021-09-02T10:00:00Z",
+					"delay": "00:00:00",
+					"maxConcurrency": 50,
+					"retryPolicy": {
+						"intervalInSeconds": 30
+					},
+					"dependsOn": []
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
